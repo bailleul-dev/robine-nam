@@ -1,0 +1,22 @@
+[package]
+name = "robine-nam"
+version = "0.1.0"
+description = "Minimal, allocation-free, audio-driver-agnostic runtime for Neural Amp Modeler A2 (nam2) small and large models"
+keywords = ["audio", "dsp", "nam", "neural-amp-modeler", "guitar"]
+categories = ["multimedia::audio"]
+readme = "README.md"
+rust-version = "1.88"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[dependencies]
+serde_json = { version = "1.0", default-features = false, features = ["std", "float_roundtrip"] }
+
+[dev-dependencies]
+
+[features]
+default = []
+# Force the portable scalar backend (for testing / unsupported targets).
+scalar = []

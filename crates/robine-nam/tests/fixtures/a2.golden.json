@@ -1,0 +1,12 @@
+{
+  "model": "A2.nam",
+  "generator": "ref-generic",
+  "samples": 8192,
+  "block": 64,
+  "sample_rate": 48000.0,
+  "sizes": [
+    "small",
+    "large"
+  ],
+  "format": "little-endian f32"
+}
