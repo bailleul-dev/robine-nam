@@ -1,0 +1,61 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  library:
+    name: library (${{ matrix.os }}${{ matrix.flags && format(', {0}', matrix.flags) || '' }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+          - os: ubuntu-latest
+          - os: ubuntu-latest
+            flags: -C target-feature=+fma
+          - os: windows-latest
+    runs-on: ${{ matrix.os }}
+    env:
+      RUSTFLAGS: ${{ matrix.flags }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+      - run: cargo fmt --all --check
+      - run: cargo clippy --release --all-targets -- -D warnings
+      - run: cargo test --release
+      - run: cargo test --release --features scalar
+      - run: cargo doc --no-deps
+        env:
+          RUSTDOCFLAGS: -D warnings
+
+  wasm:
+    name: library (wasm32, scalar fallback)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - run: cargo check --release --target wasm32-unknown-unknown
+
+  tools:
+    name: tools + reference comparison (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: make tools
+      - run: tools/target/release/nam-lab compare -m crates/robine-nam/tests/fixtures/A2.nam --seconds 2 --blocks 1,64
+      - run: tools/target/release/nam-lab bench -m crates/robine-nam/tests/fixtures/A2.nam --blocks 64 --seconds 1 --iters 1
