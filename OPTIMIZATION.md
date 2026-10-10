@@ -71,6 +71,7 @@ dependency, or needs a platform we have not measured on.
 | multi-threading | none for one model | real-time audio is single-threaded per instance; parallelism belongs to the host (one model per channel) |
 | fewer FMAs by algorithm (sparsity, pruning, Winograd-style tricks for dilated 1-D conv) | the only way past the FMA peak | changes the model or the output; out of scope for a runtime |
 | `max_block` sweep | ring sizes and chunking only | processing cost per sample is flat from block 32 up; block 16 is ~10 % more expensive (tile tails) |
+| dedicated single-sample kernel (`process_sample` currently runs the block path with n = 1) | block 1 costs 411 ns (small) / 873 ns (large) against 88 / 317 at block 64, i.e. the per-layer fixed costs (push, bases, tile tail, head) dominate; a hand-written per-sample path could roughly halve that | only matters for hosts that call per sample (upstream costs 813 / 1 862 ns there); buffering 16+ samples on the host side gets 95 % of the block-64 speed for free |
 
 ## What has not been measured
 
