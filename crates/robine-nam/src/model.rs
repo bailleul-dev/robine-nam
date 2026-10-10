@@ -176,15 +176,14 @@ impl Model {
         }
     }
 
-    /// Process a single sample. Block processing is cheaper per sample;
-    /// prefer `process` when you have more than one.
+    /// Process a single sample through a dedicated path (same arithmetic as
+    /// `process`, bit-identical output). Blocks of 16 samples or more are
+    /// still cheaper per sample; see `OPTIMIZATION.md`.
     pub fn process_sample(&mut self, input: f32) -> f32 {
-        let mut out = [0.0f32];
         match &mut self.kind {
-            Kind::Small(e) => e.process_block(&[input], &mut out),
-            Kind::Large(e) => e.process_block(&[input], &mut out),
+            Kind::Small(e) => e.process_sample(input),
+            Kind::Large(e) => e.process_sample(input),
         }
-        out[0]
     }
 }
 
@@ -295,6 +294,36 @@ mod tests {
             let mut in_place = input.clone();
             model.process_in_place(&mut in_place);
             assert_eq!(in_place, reference, "size {size} in place");
+        }
+    }
+
+    #[test]
+    fn causal_with_zero_added_latency() {
+        // Output i depends on inputs 0..=i only, whatever the block size: two
+        // inputs identical up to index `split` give bit-identical outputs up
+        // to `split`, and differ right after.
+        for size in [Size::Small, Size::Large] {
+            let a = test_signal(600);
+            let split = 300;
+            let mut b = a.clone();
+            for v in b[split..].iter_mut() {
+                *v += 0.25;
+            }
+            for block in [1usize, 7, 64, 600] {
+                let mut out_a = vec![0.0; a.len()];
+                let mut out_b = vec![0.0; a.len()];
+                random_model(size, block).process(&a, &mut out_a);
+                random_model(size, block).process(&b, &mut out_b);
+                assert_eq!(
+                    out_a[..split],
+                    out_b[..split],
+                    "{size} block {block}: not causal"
+                );
+                assert_ne!(
+                    out_a[split], out_b[split],
+                    "{size} block {block}: latency added"
+                );
+            }
         }
     }
 

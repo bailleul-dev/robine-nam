@@ -55,3 +55,16 @@ At block 64, robine-nam is 2.67x faster than the upstream A2 fast path and 2.73x
 
 
 The step-by-step history of how these numbers were reached is in [`OPTIMIZATION.md`](OPTIMIZATION.md).
+
+## Single-sample processing
+
+`process_sample` (and `process` with a 1-sample slice) runs a dedicated path
+with the same arithmetic as the block path, so the output is bit-identical:
+
+| | robine | upstream A2 fast path |
+|---|---:|---:|
+| small, ns per sample | 313 | 813 |
+| large, ns per sample | 607 | 1 862 |
+
+Blocks of 16 samples or more are still 2 to 3 times cheaper per sample;
+either way no latency is added, the network is causal.

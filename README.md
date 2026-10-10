@@ -56,7 +56,11 @@ What the library does:
 * runs the network with the upstream weight order, prewarms the receptive
   field (6347 samples) at load and caches that state so `reset` is free;
 * processes blocks of any length, chunked by a `max_block` chosen at build
-  time, with bit-identical results whatever the chunking;
+  time, with bit-identical results whatever the chunking, and **adds no
+  latency in any mode**: the network is causal, output `i` depends on inputs
+  `0..=i` only (enforced by a test), block processing just computes the
+  samples the host already has; `process_sample` has its own dedicated
+  path for hosts that run sample by sample;
 * allocates nothing once built: `process`, `process_in_place`,
   `process_sample` and `reset` are enforced allocation-free by a test with a
   counting global allocator (`tests/no_alloc.rs`); parsing, building and

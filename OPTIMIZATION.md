@@ -36,6 +36,7 @@ block size.
 | power-of-two history rings with a tail mirror, one `memcpy` push per layer and block | any tap read of a block is one contiguous slice; push cost is O(block) with no periodic `memmove` |
 | scratch `layer_in` buffer in L1 + push, rather than writing into the next ring directly | per-frame mirror writes into rings that live in L2 lost to one grouped `memcpy` (+10 %) |
 | prewarm at load, steady state cached, `reset` just refills the rings | `reset` is allocation-free and O(ring size) |
+| dedicated single-sample path (`process_sample`: direct ring writes, no scratch copies, one-frame tiles, same accumulator sets as the block path) | block 1 went from 411 / 873 ns to 313 / 607 ns (upstream: 813 / 1 862) while staying bit-identical to block processing |
 
 ## Dropped (measured)
 
@@ -70,8 +71,8 @@ dependency, or needs a platform we have not measured on.
 | skipping the last layer's 1x1 residual (its output is unused) | ~1/23 of the residual work, <1 % | trivial, but it is a special case in the kernel |
 | multi-threading | none for one model | real-time audio is single-threaded per instance; parallelism belongs to the host (one model per channel) |
 | fewer FMAs by algorithm (sparsity, pruning, Winograd-style tricks for dilated 1-D conv) | the only way past the FMA peak | changes the model or the output; out of scope for a runtime |
-| `max_block` sweep | ring sizes and chunking only | processing cost per sample is flat from block 32 up; block 16 is ~10 % more expensive (tile tails) |
-| dedicated single-sample kernel (`process_sample` currently runs the block path with n = 1) | block 1 costs 411 ns (small) / 873 ns (large) against 88 / 317 at block 64, i.e. the per-layer fixed costs (push, bases, tile tail, head) dominate; a hand-written per-sample path could roughly halve that | only matters for hosts that call per sample (upstream costs 813 / 1 862 ns there); buffering 16+ samples on the host side gets 95 % of the block-64 speed for free |
+| `max_block` sweep | ring sizes and chunking only | processing cost per sample is flat from block 32 up; block 16 is ~10 % more expensive (tile tails); block 1 (`process_sample`) is 3.5x small / 1.9x large the block-64 cost because the per-layer fixed work (ring write, bases, one-frame tile, head) is paid per sample |
+| shorter FMA chains on the single-sample path (one accumulator set per input channel) | measured -10 % on `process_sample` (313 -> 278 ns small, 607 -> 575 ns large) | changes the summation order, so block-1 output stops being bit-identical to block-64 output (1e-9 differences); dropped to keep the chunk-independence guarantee |
 
 ## What has not been measured
 

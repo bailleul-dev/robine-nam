@@ -80,6 +80,17 @@ impl<const C: usize> Ring<C> {
         self.write = (wp + n) & self.mask;
     }
 
+    /// Append one frame (the single-sample fast path of `push`).
+    #[inline(always)]
+    fn push_one(&mut self, frame: [f32; C]) {
+        let wp = self.write;
+        self.data[wp] = frame;
+        if wp < self.max_block {
+            self.data[self.size + wp] = frame;
+        }
+        self.write = (wp + 1) & self.mask;
+    }
+
     /// Index of the first frame of the block of `n` frames that was just
     /// pushed, shifted `delay` samples into the past. The `n` frames starting
     /// there are contiguous in `data` thanks to the mirror.
@@ -259,6 +270,10 @@ impl<const L: usize, const NV: usize, const C: usize, const S: usize, const T: u
         let n = input.len();
         debug_assert_eq!(n, output.len());
         debug_assert!(n <= self.max_block);
+        if n == 1 {
+            output[0] = self.process_sample(input[0]);
+            return;
+        }
         self.cond[..n].copy_from_slice(input);
         self.run_block(n, output);
     }
@@ -268,8 +283,47 @@ impl<const L: usize, const NV: usize, const C: usize, const S: usize, const T: u
     pub(crate) fn process_block_in_place(&mut self, buf: &mut [f32]) {
         let n = buf.len();
         debug_assert!(n <= self.max_block);
+        if n == 1 {
+            buf[0] = self.process_sample(buf[0]);
+            return;
+        }
         self.cond[..n].copy_from_slice(buf);
         self.run_block(n, buf);
+    }
+
+    /// Single-sample path: same per-frame arithmetic as the block path (so
+    /// the output is bit-identical), without the block bookkeeping (no
+    /// scratch copies, direct ring writes, one-frame tiles).
+    #[allow(clippy::needless_range_loop)]
+    pub(crate) fn process_sample(&mut self, x: f32) -> f32 {
+        let cond = [x];
+        let mut frame = [0.0; L];
+        for c in 0..L {
+            frame[c] = self.rechannel_w[c] * x;
+        }
+        let mut head_sum = [0.0; L];
+        for layer in &mut self.layers {
+            match layer.conv_w.len() / L {
+                6 => sample_layer::<L, NV, C, S, 6>(layer, &cond, &mut frame, &mut head_sum),
+                15 => sample_layer::<L, NV, C, S, 15>(layer, &cond, &mut frame, &mut head_sum),
+                _ => unreachable!("A2 kernel sizes are 6 and 15"),
+            }
+        }
+        self.head_hist.push_one(head_sum);
+        let data = &self.head_hist.data;
+        let mut acc = [V4::zero(); NV];
+        for k in 0..HEAD_KERNEL {
+            let h = &data[self.head_hist.base(1, HEAD_KERNEL - 1 - k)];
+            let w = &self.head_w[k];
+            for v in 0..NV {
+                acc[v] = acc[v].fma(V4::load(&w[v * 4..]), V4::load(&h[v * 4..]));
+            }
+        }
+        let mut y = self.head_b;
+        for v in 0..NV {
+            y += acc[v].hsum();
+        }
+        y * self.head_scale
     }
 
     #[allow(clippy::needless_range_loop)]
@@ -356,6 +410,34 @@ fn layer_forward<
         layer_tile::<L, NV, C, S, K, 1>(layer, &bases, f, cond, layer_in, head_sum);
         f += 1;
     }
+}
+
+/// One layer for a single frame: push it, run the one-frame tile.
+///
+/// The tile keeps the block path's `S` accumulator sets so that the
+/// summation order, hence the output, is bit-identical to block processing
+/// (one set per input channel would shorten the FMA chains and gain ~10 %
+/// on this path, but changes the last bits).
+#[inline(always)]
+fn sample_layer<const L: usize, const NV: usize, const C: usize, const S: usize, const K: usize>(
+    layer: &mut Layer<L>,
+    cond: &[f32; 1],
+    frame: &mut [f32; L],
+    head_sum: &mut [f32; L],
+) {
+    layer.hist.push_one(*frame);
+    let mut bases = [0usize; K];
+    for (k, base) in bases.iter_mut().enumerate() {
+        *base = layer.hist.base(1, (K - 1 - k) * layer.dilation);
+    }
+    layer_tile::<L, NV, C, S, K, 1>(
+        layer,
+        &bases,
+        0,
+        cond,
+        core::slice::from_mut(frame),
+        core::slice::from_mut(head_sum),
+    );
 }
 
 /// `T` consecutive frames of one layer, starting at frame `f`.
