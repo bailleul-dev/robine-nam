@@ -1,0 +1,25 @@
+[workspace]
+resolver = "2"
+members = ["crates/robine-nam"]
+# `tools/` is its own workspace: it carries the C++ reference build and the
+# measurement CLIs, and is meant to be extractable into a separate repository.
+exclude = ["tools"]
+
+[workspace.package]
+edition = "2021"
+license = "MIT"
+repository = "https://github.com/bailleul-dev/robine-nam"
+authors = ["Guillaume Bailleul"]
+
+# Real-time audio is only meaningful in release builds: never benchmark or
+# compare quality with a debug build.
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+panic = "abort"
+debug = false
+
+[profile.bench]
+inherits = "release"
+debug = true

@@ -1,0 +1,14 @@
+/target
+/tools/target
+/assets/*
+!/assets/README.md
+!/assets/.gitkeep
+*.tmp
+.DS_Store
+__pycache__/
+*.pyc
+
+/.env
+
+# Upstream reference sources, fetched by tools/nam-reference-sys/vendor.sh
+/tools/nam-reference-sys/vendor/

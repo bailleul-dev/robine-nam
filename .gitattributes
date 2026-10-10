@@ -1,0 +1,4 @@
+* text=auto eol=lf
+*.f32 binary
+*.nam -diff
+*.wav binary
