@@ -4,8 +4,9 @@
 
 A small, allocation-free, audio-driver-agnostic Rust runtime for
 [Neural Amp Modeler](https://www.neuralampmodeler.com) **A2** ("nam2")
-models, plus the measurement tools used to prove it matches the upstream
-reference and to track its performance.
+models. The measurement tools used to prove it matches the upstream
+reference and to track its performance are in
+[robine-wavelab](https://github.com/bailleul-dev/robine-wavelab).
 
 It deliberately supports only the two A2 variants:
 
@@ -82,7 +83,8 @@ audio I/O. Those belong to the host.
 
 ### Accuracy and speed
 
-Measured with `tools/nam-lab` against the upstream
+Measured with `nam-lab` (in
+[robine-wavelab](https://github.com/bailleul-dev/robine-wavelab)) against the upstream
 [NeuralAmpModelerCore](https://github.com/sdatkinson/NeuralAmpModelerCore)
 (generic WaveNet and its own A2 fast path), release builds, Apple M1,
 48 kHz, upstream `A2.nam` example and real TONE3000 captures:
@@ -94,7 +96,7 @@ Measured with `tools/nam-lab` against the upstream
   factor, per-block latency percentiles) for robine-nam, the upstream fast
   path and the upstream generic path side by side; at block 64 robine-nam
   is roughly 1.3x (small) and 2.5x (large) faster than the upstream A2 fast
-  path. Regenerate it with `make bench`.
+  path. Regenerate it with `make nam-bench` in robine-wavelab.
 
 Always use release builds for anything audio (`cargo build --release`,
 `cargo test --release`); the profiles enable LTO and `codegen-units = 1`.
@@ -104,9 +106,6 @@ Always use release builds for anything audio (`cargo build --release`,
 ```
 crates/robine-nam/      the library (root Cargo workspace)
   tests/fixtures/       upstream A2.nam (MIT) + golden vectors from the reference
-tools/                  separate workspace, extractable to its own repo
-  nam-reference-sys/    cc build of the upstream C++ (fetched at a pinned commit into vendor/) + C shim
-  nam-lab/              CLI: inspect, render, compare, compare-wav, bench, golden
 scripts/download_assets.py   test assets (DI inputs, IRs, upstream models, TONE3000 captures)
 assets/                 downloaded material, git-ignored
 .env.example            variables read by the Makefile and the script (copy to .env, git-ignored)
@@ -117,11 +116,7 @@ assets/                 downloaded material, git-ignored
 ```sh
 git clone https://github.com/bailleul-dev/robine-nam
 make test                      # library unit + golden tests (release)
-make tools                     # fetches the pinned upstream reference, builds it and nam-lab
 make assets                    # public DI inputs, IRs, upstream example models
-make compare                   # robine vs upstream, exit code != 0 on mismatch
-make bench                     # throughput / latency table (+ target/bench.json)
-make listen                    # WAVs to hear: robine vs upstream, diff +60 dB, blind A/B (assets/listening)
 
 # A2 captures from TONE3000 (first run opens a browser for approval):
 cp .env.example .env            # then set TONE3000_CLIENT_ID=t3k_pub_... (tone3000.com/settings)
@@ -129,7 +124,18 @@ make tone TONE=6580
 python3 -I scripts/download_assets.py --search "AC30"
 ```
 
-`nam-lab` usage is documented in [`tools/README.md`](tools/README.md).
+The comparison with the upstream reference, the benchmarks and the listening
+sets are run from
+[robine-wavelab](https://github.com/bailleul-dev/robine-wavelab), checked out
+next to this repository:
+
+```sh
+cd ../robine-wavelab
+make build                     # fetches the pinned upstream reference, builds it and nam-lab
+make nam-compare               # robine vs upstream, exit code != 0 on mismatch
+make nam-bench                 # throughput / latency table
+make nam-listen                # WAVs to hear: robine vs upstream, diff +60 dB, blind A/B (assets/listening here)
+```
 
 ## AI usage
 
@@ -142,6 +148,6 @@ validates it.
 
 ## License
 
-MIT. The upstream NeuralAmpModelerCore fetched by the tools is MIT (Steven
+MIT. The upstream NeuralAmpModelerCore the tools compare against is MIT (Steven
 Atkinson); TONE3000 captures and demo audio keep their own licenses and are
 never committed.

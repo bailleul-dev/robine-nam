@@ -45,17 +45,3 @@ jobs:
         with:
           targets: wasm32-unknown-unknown
       - run: cargo check --release --target wasm32-unknown-unknown
-
-  tools:
-    name: tools + reference comparison (${{ matrix.os }})
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, macos-latest]
-    runs-on: ${{ matrix.os }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - run: make tools
-      - run: tools/target/release/nam-lab compare -m crates/robine-nam/tests/fixtures/A2.nam --seconds 2 --blocks 1,64
-      - run: tools/target/release/nam-lab bench -m crates/robine-nam/tests/fixtures/A2.nam --blocks 64 --seconds 1 --iters 1

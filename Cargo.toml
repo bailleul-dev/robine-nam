@@ -1,9 +1,6 @@
 [workspace]
 resolver = "2"
 members = ["crates/robine-nam"]
-# `tools/` is its own workspace: it carries the C++ reference build and the
-# measurement CLIs, and is meant to be extractable into a separate repository.
-exclude = ["tools"]
 
 [workspace.package]
 edition = "2021"

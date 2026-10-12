@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+* The measurement tools (`nam-reference-sys`, `nam-lab`, the listening-set
+  script) moved to robine-wavelab, where they share their measures with the
+  tools of robine-spice. This repository keeps the library, its tests and
+  the asset downloader.
+
 ## 0.1.0 — 2026-10-10
 
 Initial release.

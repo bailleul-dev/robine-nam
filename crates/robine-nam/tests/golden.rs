@@ -1,9 +1,9 @@
 //! Golden test against the upstream NeuralAmpModelerCore reference.
 //!
-//! The fixtures were produced by `nam-lab golden` (tools/) running the
+//! The fixtures were produced by `nam-lab golden` (robine-wavelab) running the
 //! upstream *generic* WaveNet on the upstream `A2.nam` example model, which
 //! bundles both the small (3-channel) and large (8-channel) variants.
-//! Regenerate with `make golden`.
+//! Regenerate with `make nam-golden` in robine-wavelab.
 
 use robine_nam::{NamFile, Size};
 use std::path::PathBuf;

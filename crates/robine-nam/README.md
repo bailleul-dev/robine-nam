@@ -18,11 +18,12 @@ model.process_in_place(&mut buf);          // RT-safe: no allocation, no locks
 ```
 
 * Output matches the upstream NeuralAmpModelerCore reference to ~1e-7
-  (SNR > 120 dB), verified by golden tests and by the measurement tools in
-  the repository.
+  (SNR > 120 dB), verified by golden tests and by the measurement tools of
+  robine-wavelab.
 * Any block length; results are bit-identical whatever the chunking.
 * No resampling, no gain staging, no I/O: `Metadata` exposes loudness and
   calibration levels so the host can do the usual NAM gain staging.
 
-Build and measure in release mode only. Full documentation, benchmarks and
-tools: <https://github.com/bailleul-dev/robine-nam>.
+Build and measure in release mode only. Full documentation and benchmarks:
+<https://github.com/bailleul-dev/robine-nam>; tools:
+<https://github.com/bailleul-dev/robine-wavelab>.

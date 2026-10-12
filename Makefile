@@ -1,20 +1,20 @@
 # robine-nam — everything audio-related runs in release builds only.
 
+# The measurement tools (comparison with the upstream reference, benchmarks,
+# golden fixtures, listening sets) are in ../robine-wavelab:
+#   make -C ../robine-wavelab nam-compare | nam-bench | nam-golden | nam-listen
+
 # Project-local environment (TONE3000 keys, asset dir): see .env.example.
 ifneq (,$(wildcard .env))
 include .env
 export
 endif
 
-NAM_LAB      := tools/target/release/nam-lab
-FIXTURES     := crates/robine-nam/tests/fixtures
 ASSETS       := $(if $(ROBINE_NAM_ASSETS_DIR),$(ROBINE_NAM_ASSETS_DIR),assets)
-MODEL        ?= $(FIXTURES)/A2.nam
-INPUT        ?= $(ASSETS)/inputs/Brit - Guitar.wav
 
-.PHONY: all build test tools compare bench golden assets assets-all fmt clippy clean aidecl-check listen
+.PHONY: all build test assets assets-all tone fmt clippy clean aidecl-check
 
-all: build tools
+all: build
 
 ## Library
 build:
@@ -30,35 +30,9 @@ test:
 
 fmt:
 	cargo fmt --all
-	cd tools && cargo fmt --all
 
 clippy:
 	cargo clippy --release --all-targets -- -D warnings
-	cd tools && cargo clippy --release --all-targets
-
-## Measurement tools (separate workspace; builds the C++ upstream reference)
-tools:
-	tools/nam-reference-sys/vendor.sh
-	cd tools && cargo build --release
-
-## Sample-exact delta against the upstream reference (exit code != 0 on failure)
-compare: tools
-	$(NAM_LAB) compare -m "$(MODEL)" --seconds 5
-
-compare-wav: tools
-	$(NAM_LAB) compare -m "$(MODEL)" -i "$(INPUT)" --blocks 64
-
-## Throughput / latency of robine-nam vs upstream fast and generic paths
-bench: tools
-	$(NAM_LAB) bench -m "$(MODEL)" --json target/bench.json
-
-## Listening set: robine vs upstream renders, diff and blind A/B WAVs in assets/listening
-listen: tools
-	python3 -I scripts/listening_set.py $(LISTEN_ARGS)
-
-## Regenerate the golden fixtures used by `cargo test`
-golden: tools
-	$(NAM_LAB) golden -m $(FIXTURES)/A2.nam -o $(FIXTURES) --name a2
 
 ## Test assets (public DI inputs, IRs, upstream example models)
 assets:
@@ -73,7 +47,6 @@ tone:
 
 clean:
 	cargo clean
-	cd tools && cargo clean
 
 ## Validate the AI usage declaration (https://ai-declaration.org/)
 aidecl-check:

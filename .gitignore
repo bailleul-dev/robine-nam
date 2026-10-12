@@ -1,5 +1,4 @@
 /target
-/tools/target
 /assets/*
 !/assets/README.md
 !/assets/.gitkeep
@@ -9,6 +8,3 @@ __pycache__/
 *.pyc
 
 /.env
-
-# Upstream reference sources, fetched by tools/nam-reference-sys/vendor.sh
-/tools/nam-reference-sys/vendor/

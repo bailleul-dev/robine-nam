@@ -3,7 +3,8 @@
 What was tried on the A2 engine, what stayed, what was dropped and why, and
 what has not been explored yet. Numbers are best-of-N ns/sample at block 64,
 48 kHz, Apple M1, release build; quality is the sample-exact delta against
-the upstream NeuralAmpModelerCore generic WaveNet (`nam-lab compare`).
+the upstream NeuralAmpModelerCore generic WaveNet (`nam-lab compare`, in
+robine-wavelab).
 
 ## Where we stand
 
@@ -88,7 +89,7 @@ dependency, or needs a platform we have not measured on.
 * `nam-lab bench --brief`: best-of-N and median ns/sample; best-of-N removes
   scheduler noise but not slow drift (a laptop under background load drifts
   by ~10 % over minutes).
-* `tools/scripts/ab.sh`: two binaries interleaved in ABBA order. The first
+* `scripts/ab.sh` (robine-wavelab): two binaries interleaved in ABBA order. The first
   AB-only version had a ~5 % bias in favour of whichever ran second, which
   would have "confirmed" a false 7 % gain.
 * Always read the generated assembly (`RUSTFLAGS="--emit asm"`, count
